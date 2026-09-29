@@ -38,7 +38,7 @@ final class Settings: ObservableObject {
     init() {
         isEnabled = defaults.object(forKey: "enabled") as? Bool ?? true
         scope = DisplayScope(rawValue: defaults.string(forKey: "scope") ?? "") ?? .allDisplays
-        roundCorners = defaults.object(forKey: "roundCorners") as? Bool ?? false
+        roundCorners = defaults.object(forKey: "roundCorners") as? Bool ?? true
         showMenuBarIcon = defaults.object(forKey: "showMenuBarIcon") as? Bool ?? true
     }
 }
