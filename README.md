@@ -8,6 +8,16 @@ drawing a black bar behind the menu bar. Native AppKit, no network code, no anal
 - Optional rounded corners for the desktop (top and bottom), like the display's own for the desktop, like the display's own.
 - Open at login, and an option to hide the menu bar icon entirely for set-and-forget use. With the icon hidden, open Blackout from Applications again to bring the settings window back.
 
+## Install
+
+```sh
+brew install --cask benjweaver/blackout/blackout
+```
+
+Blackout isn't notarized yet, so the cask clears the download quarantine flag on
+install. Or download `Blackout-<version>.zip` from Releases and open it yourself
+(right-click, Open, the first time).
+
 ## Build
 
 ```sh
@@ -22,3 +32,8 @@ Requires macOS 14+. Licensed GPL-3.0-or-later.
 ## Icon
 
 `swift Scripts/make-icon.swift` regenerates the app icon from code.
+
+## Release
+
+`Scripts/release.sh` builds a universal, ad-hoc-signed zip and prints its SHA-256
+for the [Homebrew tap](https://github.com/benjweaver/homebrew-blackout).
