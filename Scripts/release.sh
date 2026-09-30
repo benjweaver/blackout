@@ -15,7 +15,8 @@ xcodegen generate >/dev/null
 # Build from scratch: Xcode leaves files removed from the project in the built app.
 rm -rf build/release-derived
 xcodebuild -project Blackout.xcodeproj -scheme Blackout -configuration Release \
-  -derivedDataPath build/release-derived ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+  -destination "generic/platform=macOS" -derivedDataPath build/release-derived \
+  ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY=- build -quiet
 
 out=build/release
