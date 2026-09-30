@@ -43,5 +43,7 @@ Blackout is free. If it's useful, you can [support its development](https://benj
 
 ## Release
 
-`Scripts/release.sh` builds a universal, ad-hoc-signed zip and prints its SHA-256
-for the [Homebrew tap](https://github.com/benjweaver/homebrew-blackout).
+Bump the version in `project.yml`, add its section to `CHANGELOG.md`, then commit and
+push. `Scripts/release.sh` does the rest: it builds a universal, ad-hoc-signed zip,
+publishes it as a GitHub release with that changelog section as the notes, and points the
+[Homebrew tap](https://github.com/benjweaver/homebrew-blackout) at it.
