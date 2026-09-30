@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                      accessibilityDescription: "Blackout")
         item.menu = buildMenu()
         statusItem = item
+        NSApp.mainMenu = Self.makeMainMenu()
 
         // Values arrive from the publishers before the properties change, so pass them through.
         settings.$isEnabled.combineLatest(settings.$scope, settings.$roundCorners)
@@ -40,9 +41,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The settings window appears when a person opens Blackout, never when macOS
     /// starts it at login (the launch event says which).
     private static var launchedAtLogin: Bool {
-        NSAppleEventManager.shared().currentAppleEvent?
-            .paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?
+        guard let event = NSAppleEventManager.shared().currentAppleEvent,
+              event.eventID == AEEventID(kAEOpenApplication) else { return false }
+        return event.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?
             .enumCodeValue == OSType(keyAELaunchedAsLogInItem)
+    }
+
+    /// Blackout never shows a menu bar of its own, but the main menu's key equivalents
+    /// still work, which gives the settings window the standard ⌘W and ⌘Q.
+    private static func makeMainMenu() -> NSMenu {
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        appMenu.addItem(withTitle: "Quit Blackout", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let appItem = NSMenuItem()
+        appItem.submenu = appMenu
+        let mainMenu = NSMenu()
+        mainMenu.addItem(appItem)
+        return mainMenu
     }
 
     /// Opening the app again while it runs (Finder, Spotlight) brings the window back,

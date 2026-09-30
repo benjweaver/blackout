@@ -4,9 +4,13 @@ A free, open-source, telemetry-free menu bar app that hides the MacBook notch by
 drawing a black bar behind the menu bar. Native AppKit, no network code, no analytics.
 
 - **Show black bar on:** MacBook display only, or all displays (so every menu bar looks the same).
-- Works with dynamic wallpapers, multiple displays, and Spaces: it draws over the menu bar rather than editing your wallpaper, so nothing needs regenerating.
+- Works with dynamic wallpapers, multiple displays, and Spaces: it draws behind the menu bar rather than editing your wallpaper, so nothing needs regenerating.
 - Rounded desktop corners at the top and bottom, like the display's own. On by default; you can turn them off.
 - Open at login, and an option to hide the menu bar icon entirely for set-and-forget use. With the icon hidden, open Blackout from Applications again to bring the settings window back.
+
+Blackout draws beneath the menu bar, so it needs the menu bar to be see-through. With
+**Reduce transparency** on (System Settings → Accessibility → Display), macOS draws an opaque
+menu bar over it and the notch stays visible. The settings window says so when that's the case.
 
 ## Install
 
@@ -15,8 +19,8 @@ brew install --cask benjweaver/blackout/blackout
 ```
 
 Blackout isn't notarized yet, so the cask clears the download quarantine flag on
-install. Or download `Blackout-<version>.zip` from Releases and open it yourself
-(right-click, Open, the first time).
+install. Or download `Blackout-<version>.zip` from Releases. macOS blocks the first
+open, so go to System Settings → Privacy & Security and click Open Anyway.
 
 ## Build
 

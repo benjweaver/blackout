@@ -23,24 +23,24 @@ final class OverlayController {
     private var windows: [Key: NSWindow] = [:]
 
     func update(enabled: Bool, scope: DisplayScope, roundCorners: Bool) {
-        var wanted: [Key: (frame: NSRect, view: NSView)] = [:]
+        var wanted: [Key: NSRect] = [:]
         if enabled {
             let r = Self.cornerRadius
             for screen in NSScreen.screens {
                 guard let id = screen.displayID else { continue }
                 if scope == .builtInOnly, CGDisplayIsBuiltin(id) == 0 { continue }
                 let height = Self.barHeight(for: screen)
-                guard height > 0 else { continue }
                 let f = screen.frame
-                wanted[Key(display: id, kind: .bar)] = (
-                    NSRect(x: f.minX, y: f.maxY - height, width: f.width, height: height), BarView())
+                if height > 0 {
+                    wanted[Key(display: id, kind: .bar)] =
+                        NSRect(x: f.minX, y: f.maxY - height, width: f.width, height: height)
+                }
+                // A display without a menu bar still gets corners, at its top edge.
                 if roundCorners {
-                    wanted[Key(display: id, kind: .topCorners)] = (
-                        NSRect(x: f.minX, y: f.maxY - height - r, width: f.width, height: r),
-                        CornersView(edge: .top, radius: r))
-                    wanted[Key(display: id, kind: .bottomCorners)] = (
-                        NSRect(x: f.minX, y: f.minY, width: f.width, height: r),
-                        CornersView(edge: .bottom, radius: r))
+                    wanted[Key(display: id, kind: .topCorners)] =
+                        NSRect(x: f.minX, y: f.maxY - height - r, width: f.width, height: r)
+                    wanted[Key(display: id, kind: .bottomCorners)] =
+                        NSRect(x: f.minX, y: f.minY, width: f.width, height: r)
                 }
             }
         }
@@ -48,11 +48,13 @@ final class OverlayController {
         for key in windows.keys where wanted[key] == nil {
             windows.removeValue(forKey: key)?.orderOut(nil)
         }
-        for (key, item) in wanted {
-            let window = windows[key] ?? Self.makeWindow(frame: item.frame, kind: key.kind)
-            windows[key] = window
-            window.setFrame(item.frame, display: true)
-            window.contentView = item.view
+        // Every Space switch lands here, so leave windows alone unless their frame changed.
+        for (key, frame) in wanted {
+            if let window = windows[key] {
+                if window.frame != frame { window.setFrame(frame, display: true) }
+            } else {
+                windows[key] = Self.makeWindow(frame: frame, kind: key.kind)
+            }
         }
     }
 
@@ -62,9 +64,10 @@ final class OverlayController {
         max(screen.safeAreaInsets.top, screen.frame.maxY - screen.visibleFrame.maxY)
     }
 
-    /// Slightly larger than the corner radius of current macOS windows (about 14), so a window at the screen
-    /// edge leaves no sliver of wallpaper between its curve and the black.
-    private static let cornerRadius: CGFloat = 15
+    /// Slightly larger than the corner radius of current macOS windows (16 for AppKit
+    /// windows, about 14 for Electron ones), so a window at the screen edge leaves no
+    /// sliver of wallpaper between its curve and the black.
+    private static let cornerRadius: CGFloat = 17
 
     private static func makeWindow(frame: NSRect, kind: Kind) -> NSWindow {
         let window = OverlayWindow(contentRect: frame, styleMask: .borderless,
@@ -77,8 +80,10 @@ final class OverlayController {
         switch kind {
         case .bar:
             window.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue - 1)
+            window.contentView = BarView()
         case .topCorners, .bottomCorners:
             window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
+            window.contentView = CornersView(edge: kind == .topCorners ? .top : .bottom, radius: cornerRadius)
         }
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window.orderFrontRegardless()

@@ -7,12 +7,15 @@ let outDir = "App/Assets.xcassets/AppIcon.appiconset"
 
 /// Draws the icon on a 1024-point canvas: a wallpaper-like square with a black
 /// menu bar across the top and the desktop's corners rounded beneath it.
-func draw(in ctx: CGContext) {
+/// `scale` is pixels per point: shadows ignore the context's transform, so the
+/// shadow is sized by hand.
+func draw(in ctx: CGContext, scale: CGFloat) {
     let body = CGRect(x: 100, y: 100, width: 824, height: 824)
     let squircle = CGPath(roundedRect: body, cornerWidth: 185, cornerHeight: 185, transform: nil)
 
     ctx.saveGState()
-    ctx.setShadow(offset: CGSize(width: 0, height: -12), blur: 24, color: NSColor.black.withAlphaComponent(0.35).cgColor)
+    ctx.setShadow(offset: CGSize(width: 0, height: -12 * scale), blur: 24 * scale,
+                  color: NSColor.black.withAlphaComponent(0.35).cgColor)
     ctx.addPath(squircle)
     ctx.setFillColor(NSColor.black.cgColor)
     ctx.fillPath()
@@ -83,8 +86,9 @@ func render(pixels: Int) -> Data {
     let gc = NSGraphicsContext(bitmapImageRep: rep)!
     NSGraphicsContext.current = gc
     let ctx = gc.cgContext
-    ctx.scaleBy(x: CGFloat(pixels) / 1024, y: CGFloat(pixels) / 1024)
-    draw(in: ctx)
+    let scale = CGFloat(pixels) / 1024
+    ctx.scaleBy(x: scale, y: scale)
+    draw(in: ctx, scale: scale)
     return rep.representation(using: .png, properties: [:])!
 }
 
