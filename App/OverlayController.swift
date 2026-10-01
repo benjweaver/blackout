@@ -2,13 +2,13 @@ import AppKit
 
 /// Draws the black that hides the notch, as click-through windows on each targeted screen.
 ///
-/// - The bar covers the menu bar. It sits just below the menu bar's own level, so
-///   menu bar items, the clock, and menus draw on top while the notch disappears.
-/// - The optional rounded corners sit at desktop level, just above the wallpaper
-///   and below every app window, so a window keeps its own corners and only the
-///   exposed desktop is rounded, as if the wallpaper itself had been edited.
-///
-/// Neither joins full-screen Spaces, where the menu bar is hidden anyway.
+/// Every window sits at desktop level, just above the wallpaper and below every app
+/// window, as if the wallpaper itself had been edited:
+/// - The bar fills the menu bar's strip. On a normal desktop no app window goes there,
+///   so it shows behind the menu bar and the notch disappears. A full-screen app's
+///   window covers it, so the app's own top edge (a VM's menu bar, say) stays visible.
+/// - The optional rounded corners show only where the desktop is exposed, so a
+///   window keeps its own corners.
 @MainActor
 final class OverlayController {
     private enum Kind: CaseIterable {
@@ -77,12 +77,13 @@ final class OverlayController {
         window.isOpaque = false
         window.hasShadow = false
         window.ignoresMouseEvents = true
+        // Windows that join all Spaces show in full-screen ones too, so anything above
+        // desktop level would cover the top of a full-screen app.
+        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
         switch kind {
         case .bar:
-            window.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue - 1)
             window.contentView = BarView()
         case .topCorners, .bottomCorners:
-            window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
             window.contentView = CornersView(edge: kind == .topCorners ? .top : .bottom, radius: cornerRadius)
         }
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
