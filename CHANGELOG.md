@@ -5,6 +5,14 @@ All notable changes are listed here. The format follows
 [Semantic Versioning](https://semver.org/). Each release's notes on GitHub come
 from its section below.
 
+## [1.0.2] - 2026-10-01
+
+### Fixed
+
+- Blackout's bar no longer covers the top of full-screen apps on displays
+  without a notch, such as external monitors. A full-screen virtual machine's
+  menu bar, for example, was hidden behind it.
+
 ## [1.0.1] - 2026-09-29
 
 ### Added
