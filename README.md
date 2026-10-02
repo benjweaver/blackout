@@ -19,9 +19,8 @@ menu bar over it and the notch stays visible. The settings window says so when t
 brew install --cask benjweaver/blackout/blackout
 ```
 
-Blackout isn't notarized yet, so the cask clears the download quarantine flag on
-install. Or download `Blackout-<version>.zip` from Releases. macOS blocks the first
-open, so go to System Settings → Privacy & Security and click Open Anyway.
+Or download `Blackout-<version>.zip` from Releases. Releases are signed with a
+Developer ID and notarized by Apple, so macOS opens them without a warning.
 
 ## Build
 
@@ -45,6 +44,14 @@ Blackout is free. If it's useful, you can [support its development](https://benj
 ## Release
 
 Bump the version in `project.yml`, add its section to `CHANGELOG.md`, then commit and
-push. `Scripts/release.sh` does the rest: it builds a universal, ad-hoc-signed zip,
-publishes it as a GitHub release with that changelog section as the notes, and points the
+push. `Scripts/release.sh` does the rest: it builds a universal app, signs it with the
+Developer ID, has Apple notarize it, publishes the zip as a GitHub release with that
+changelog section as the notes, and points the
 [Homebrew tap](https://github.com/benjweaver/homebrew-blackout) at it.
+
+Notarizing needs an App Store Connect API key, saved once in the keychain as the
+notarytool profile `notary`:
+
+```sh
+xcrun notarytool store-credentials notary --key AuthKey_<key id>.p8 --key-id <key id> --issuer <issuer id>
+```

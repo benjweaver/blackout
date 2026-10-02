@@ -31,8 +31,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.benjweaver.Blackout
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Manual
-        # Ad-hoc, which is what releases ship (Scripts/release.sh). To sign a local
-        # build with your own identity, pass CODE_SIGN_IDENTITY=<SHA-1> to xcodebuild.
+        # Ad-hoc for local builds. Scripts/release.sh signs releases with the Developer
+        # ID instead. To sign a local build with your own identity, pass
+        # CODE_SIGN_IDENTITY=<SHA-1> to xcodebuild.
         CODE_SIGN_IDENTITY: "-"
         ENABLE_APP_SANDBOX: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
