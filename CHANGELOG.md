@@ -5,6 +5,14 @@ All notable changes are listed here. The format follows
 [Semantic Versioning](https://semver.org/). Each release's notes on GitHub come
 from its section below.
 
+## [1.1.1] - 2026-10-02
+
+### Changed
+
+- Signed with a Developer ID and notarized by Apple, so macOS opens Blackout
+  without a warning, from Homebrew or the zip, and the cask no longer has to
+  clear the download's quarantine flag.
+
 ## [1.1.0] - 2026-10-02
 
 ### Added
