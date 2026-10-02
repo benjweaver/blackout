@@ -5,6 +5,16 @@ All notable changes are listed here. The format follows
 [Semantic Versioning](https://semver.org/). Each release's notes on GitHub come
 from its section below.
 
+## [1.1.0] - 2026-10-02
+
+### Added
+
+- The notch stays hidden in Mission Control and App Exposé. Both draw a strip
+  of their own over the menu bar, so on a display with a notch Blackout now
+  keeps a second black bar above it, with a gap for Mission Control's + button.
+  Displays without a notch keep Mission Control's strip as it is, since it shows
+  the Space names there.
+
 ## [1.0.2] - 2026-10-01
 
 ### Fixed

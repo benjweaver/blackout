@@ -21,8 +21,8 @@ targets:
       properties:
         CFBundleName: Blackout
         CFBundleDisplayName: Blackout
-        CFBundleShortVersionString: "1.0.2"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "1.1.0"
+        CFBundleVersion: "4"
         LSUIElement: true
         LSApplicationCategoryType: public.app-category.utilities
         NSHumanReadableCopyright: "GPL-3.0-or-later"
