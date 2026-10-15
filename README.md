@@ -6,6 +6,7 @@ drawing a black bar behind the menu bar. Native AppKit, no network code, no anal
 - **Show black bar on:** MacBook display only, or all displays (so every menu bar looks the same).
 - Works with dynamic wallpapers, multiple displays, and Spaces: it draws behind the menu bar rather than editing your wallpaper, so nothing needs regenerating.
 - Keeps the notch hidden in Mission Control and App Exposé, which draw a strip of their own over the menu bar.
+- Hides the notch on the lock screen too, by switching the display to the size that ends below the camera while the screen is locked and back on unlock. This needs Blackout running, so it doesn't apply to the login window at boot or the FileVault unlock screen. There's a toggle for it in the settings window.
 - Rounded desktop corners at the top and bottom, like the display's own. On by default; you can turn them off.
 - Open at login, and an option to hide the menu bar icon entirely for set-and-forget use. With the icon hidden, open Blackout from Applications again to bring the settings window back.
 

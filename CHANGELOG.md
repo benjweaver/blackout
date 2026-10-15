@@ -5,6 +5,17 @@ All notable changes are listed here. The format follows
 [Semantic Versioning](https://semver.org/). Each release's notes on GitHub come
 from its section below.
 
+## [Unreleased]
+
+### Added
+
+- The notch is hidden on the lock screen. While the screen is locked, Blackout
+  switches each display with a notch to its mode that ends below the camera, so
+  the strip beside the notch is unlit, then restores the original mode on unlock.
+  The mode is set for Blackout only, so macOS restores it if Blackout quits. It
+  doesn't apply to the login window at boot or the FileVault unlock screen, since
+  Blackout isn't running then. A new setting, on by default, turns it off.
+
 ## [1.1.1] - 2026-10-02
 
 ### Changed

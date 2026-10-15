@@ -6,6 +6,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = Settings()
     private let overlay = OverlayController()
+    private let lockScreen = LockScreenController()
     private var statusItem: NSStatusItem?
     private var window: NSWindow?
     private var subscriptions = Set<AnyCancellable>()
@@ -24,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.overlay.update(enabled: enabled, scope: scope, roundCorners: round)
             }
             .store(in: &subscriptions)
+        settings.$isEnabled.combineLatest(settings.$hideNotchOnLockScreen)
+            .sink { [weak self] enabled, hide in self?.lockScreen.update(wanted: enabled && hide) }
+            .store(in: &subscriptions)
+        lockScreen.onRestore = { [weak self] in self?.refresh() }
         settings.$showMenuBarIcon
             .sink { [weak self] show in self?.statusItem?.isVisible = show }
             .store(in: &subscriptions)

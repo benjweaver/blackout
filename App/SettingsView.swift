@@ -26,6 +26,14 @@ struct SettingsView: View {
                 .disabled(!settings.isEnabled)
 
             Section {
+                Toggle("Hide the notch on the lock screen", isOn: $settings.hideNotchOnLockScreen)
+                    .disabled(!settings.isEnabled)
+            } footer: {
+                Text("While the screen is locked, the display briefly switches to the size that ends below the camera.")
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 // A custom binding rather than onChange, so correcting the toggle after a
                 // failure doesn't register or unregister again.
                 Toggle("Open at login", isOn: Binding(get: { launchAtLogin }, set: { setLogin($0) }))

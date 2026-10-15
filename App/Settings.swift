@@ -33,6 +33,9 @@ final class Settings: ObservableObject {
     @Published var showMenuBarIcon: Bool {
         didSet { defaults.set(showMenuBarIcon, forKey: "showMenuBarIcon") }
     }
+    @Published var hideNotchOnLockScreen: Bool {
+        didSet { defaults.set(hideNotchOnLockScreen, forKey: "hideNotchOnLockScreen") }
+    }
 
 
     init() {
@@ -40,5 +43,6 @@ final class Settings: ObservableObject {
         scope = DisplayScope(rawValue: defaults.string(forKey: "scope") ?? "") ?? .allDisplays
         roundCorners = defaults.object(forKey: "roundCorners") as? Bool ?? true
         showMenuBarIcon = defaults.object(forKey: "showMenuBarIcon") as? Bool ?? true
+        hideNotchOnLockScreen = defaults.object(forKey: "hideNotchOnLockScreen") as? Bool ?? true
     }
 }
