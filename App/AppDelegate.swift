@@ -7,7 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = Settings()
     private let overlay = OverlayController()
     private let lockScreen = LockScreenController()
-    private let lockScreenBackdrop = LockScreenBackdropController()
+    private let backdropStrip = BackdropStripController()
     private var statusItem: NSStatusItem?
     private var window: NSWindow?
     private var subscriptions = Set<AnyCancellable>()
@@ -26,10 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.overlay.update(enabled: enabled, scope: scope, roundCorners: round)
             }
             .store(in: &subscriptions)
-        settings.$isEnabled.combineLatest(settings.$lockScreenStyle)
-            .sink { [weak self] enabled, style in
+        settings.$isEnabled.combineLatest(settings.$lockScreenStyle, settings.$scope)
+            .sink { [weak self] enabled, style, scope in
                 self?.lockScreen.update(wanted: enabled && style == .shrinkBelowCamera)
-                self?.lockScreenBackdrop.update(wanted: enabled && style == .blackBehindIcons)
+                self?.backdropStrip.update(lockScreen: enabled && style == .blackBehindIcons, menuBar: enabled,
+                                           allDisplays: scope == .allDisplays)
             }
             .store(in: &subscriptions)
         lockScreen.onRestore = { [weak self] in self?.refresh() }

@@ -100,7 +100,7 @@ final class OverlayController {
         case .missionControlBar:
             // Above Mission Control's strip and the Dock it shows, below the menu bar.
             window.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue - 1)
-            window.contentView = MissionControlBarView()
+            window.contentView = MissionControlBarView(frame: NSRect(origin: .zero, size: frame.size))
         }
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window.orderFrontRegardless()
@@ -115,11 +115,31 @@ private final class BarView: NSView {
     }
 }
 
-/// Black, with a round gap for Mission Control's + button (add a desktop), which sits
-/// in the corner beside the notch and reaches up into the bar. The rest of the time the
-/// gap shows the desktop-level bar beneath.
+/// Black over Mission Control's strip, except for its bright glyphs: the + button (add a
+/// desktop), which sits in the corner beside the notch and reaches up into the bar when the
+/// Spaces are collapsed, and any Space names. A backdrop keyed on brightness passes those
+/// and blacks out everything else, so the + floats on black with no ring around it. The
+/// rest of the time the bar sits over the desktop-level bar and stays black.
 private final class MissionControlBarView: NSView {
+    // Glyphs are white; the strip's blurred background stays below half brightness.
+    private static let key = BackdropKey(gain: 30, threshold: 0.5, anyChannel: true)
+    private var keyLayer: CALayer?
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        if let layer = Self.key.makeLayer(frame: bounds, name: "BlackoutMissionControlBar") {
+            layer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+            self.layer?.addSublayer(layer)
+            keyLayer = layer
+        }
+    }
+
+    required init?(coder: NSCoder) { nil }
+
     override func draw(_ dirtyRect: NSRect) {
+        guard keyLayer == nil else { return }
+        // Without the private Core Animation classes: black with a round gap for the +.
         // As measured on macOS 27: Mission Control's strip is the notch's height plus
         // 40pt, and centres the button in it, 27pt from the screen's right edge.
         let notch = window?.screen?.safeAreaInsets.top ?? 0

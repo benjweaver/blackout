@@ -6,13 +6,15 @@ struct SettingsView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
     @State private var reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Form {
             Toggle("Hide the notch", isOn: $settings.isEnabled)
-            // An opaque menu bar covers the bar, and no app can draw beneath it.
-            if settings.isEnabled && reduceTransparency {
-                Label("Reduce transparency is on, so macOS draws the menu bar over Blackout's bar and the notch stays visible. Turn it off in System Settings → Accessibility → Display.",
+            // An opaque menu bar covers the bar. In Dark Mode Blackout keys it to black from
+            // above; in Light Mode its text is dark, and black would hide it.
+            if settings.isEnabled && reduceTransparency && colorScheme == .light {
+                Label("Reduce transparency is on, so in Light Mode macOS draws a light menu bar over Blackout's bar and the notch stays visible. Use Dark Mode, or turn Reduce transparency off in System Settings → Accessibility → Display.",
                       systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.secondary)
             }
