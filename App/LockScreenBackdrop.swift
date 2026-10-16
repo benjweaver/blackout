@@ -25,6 +25,8 @@ final class LockScreenBackdropController: NSObject {
     private var isWanted = false
     private var isLocked = false
     private var isShown = false
+    /// Keeps the strip up briefly after unlock, then fades it out.
+    private var unlockFade: Task<Void, Never>?
 
     // Tuning, measured on a 16-inch MacBook Pro's lock screen. loginwindow right-aligns its
     // icons 20 pt from the screen edge and centers their glyphs about 12.5–24 pt from the top.
@@ -33,6 +35,9 @@ final class LockScreenBackdropController: NSObject {
     private var keyBandBottom: CGFloat { Self.setting("LockScreenKeyBandBottom", 26) }
     private var keyThreshold: Float { Float(Self.setting("LockScreenKeyThreshold", 0.25)) }
     private var keyGain: Float { Float(Self.setting("LockScreenKeyGain", 30)) }
+    /// Measured on a 16-inch MacBook Pro: the desktop takes about 0.3 s to settle after unlock.
+    private var unlockHold: Double { Self.setting("LockScreenUnlockHold", 0.5) }
+    private static let unlockFadeDuration = 0.25
     // Testing aid for displays without a notch, shared with LockScreenController.
     private static let testInsetKey = "LockScreenTestInset"
 
@@ -85,6 +90,8 @@ final class LockScreenBackdropController: NSObject {
             space = 0
         }
         isShown = false
+        unlockFade?.cancel()
+        unlockFade = nil
         log.info("Lock-screen backdrop off")
     }
 
@@ -116,19 +123,45 @@ final class LockScreenBackdropController: NSObject {
         let wanted = isWanted && isLocked && notchRowPresent && !windows.isEmpty
         guard wanted != isShown else { return }
         isShown = wanted
+        unlockFade?.cancel()
+        unlockFade = nil
+        if wanted {
+            setContainers(hidden: false)
+            // Commit again once the lock screen has settled, in case WindowServer missed the first.
+            Task { @MainActor [weak self] in
+                for delay in [0.3, 1.2] {
+                    try? await Task.sleep(for: .seconds(delay))
+                    self?.nudge()
+                }
+            }
+        } else if isWanted && !isLocked {
+            // The unlock notifications arrive as the desktop starts sliding back in, and for a
+            // moment the menu bar strip shows wallpaper. Hold the black until it settles, then fade.
+            unlockFade = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(self?.unlockHold ?? 0))
+                guard let self, !Task.isCancelled else { return }
+                CATransaction.begin()
+                CATransaction.setAnimationDuration(Self.unlockFadeDuration)
+                self.containers.forEach { $0.opacity = 0 }
+                CATransaction.commit()
+                try? await Task.sleep(for: .seconds(Self.unlockFadeDuration))
+                guard !Task.isCancelled else { return }
+                self.setContainers(hidden: true)
+            }
+        } else {
+            setContainers(hidden: true)
+        }
+    }
+
+    private func setContainers(hidden: Bool) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        containers.forEach { $0.isHidden = !wanted }
+        containers.forEach {
+            $0.isHidden = hidden
+            $0.opacity = 1
+        }
         CATransaction.commit()
         CATransaction.flush()
-        guard wanted else { return }
-        // Commit again once the lock screen has settled, in case WindowServer missed the first.
-        Task { @MainActor [weak self] in
-            for delay in [0.3, 1.2] {
-                try? await Task.sleep(for: .seconds(delay))
-                self?.nudge()
-            }
-        }
     }
 
     /// Recommits the key layers so WindowServer refreshes their backdrops, which it may
