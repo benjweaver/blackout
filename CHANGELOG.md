@@ -7,7 +7,19 @@ from its section below.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-16
+
 ### Added
+
+- The notch stays hidden when macOS draws its own menu bar background, with
+  "Show menu bar background" on (System Settings → Menu Bar) or Reduce
+  transparency on in Dark Mode. Blackout turns that background black from
+  above and keeps Apple's white menu bar text and icons. It follows the menu
+  bar as it slides with Spaces, full-screen apps, and Mission Control, and
+  hides with it in full screen. Colored menu bar icons show black, apart from
+  the camera and microphone indicators. On a wallpaper light enough that macOS
+  draws a light menu bar with dark text, the menu bar is left as is. This uses
+  private macOS interfaces and turns itself off if they're missing.
 
 - The notch is hidden on the lock screen, in one of two ways, chosen in a new
   "Lock screen" setting:
@@ -24,6 +36,11 @@ from its section below.
 
   Neither applies to the login window at boot or the FileVault unlock screen,
   since Blackout isn't running then. "Leave as is" turns both off.
+
+### Changed
+
+- In Mission Control on a display with a notch, the add-a-desktop button now
+  shows on black instead of in a round gap in the bar.
 
 ## [1.1.1] - 2026-10-02
 
