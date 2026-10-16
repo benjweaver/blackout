@@ -16,6 +16,25 @@ enum DisplayScope: String, CaseIterable, Identifiable {
     }
 }
 
+/// What Blackout does on the lock screen of a notched display.
+enum LockScreenStyle: String, CaseIterable, Identifiable {
+    /// Black across the notch row, with Apple's status icons left showing.
+    case blackBehindIcons
+    /// Switch to the display mode that ends below the camera.
+    case shrinkBelowCamera
+    case off
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .blackBehindIcons: "Black behind the icons"
+        case .shrinkBelowCamera: "Shrink below the camera"
+        case .off: "Leave as is"
+        }
+    }
+}
+
 /// User preferences, stored locally in UserDefaults. Nothing leaves the machine.
 @MainActor
 final class Settings: ObservableObject {
@@ -33,16 +52,18 @@ final class Settings: ObservableObject {
     @Published var showMenuBarIcon: Bool {
         didSet { defaults.set(showMenuBarIcon, forKey: "showMenuBarIcon") }
     }
-    @Published var hideNotchOnLockScreen: Bool {
-        didSet { defaults.set(hideNotchOnLockScreen, forKey: "hideNotchOnLockScreen") }
+    @Published var lockScreenStyle: LockScreenStyle {
+        didSet { defaults.set(lockScreenStyle.rawValue, forKey: "lockScreenStyle") }
     }
-
 
     init() {
         isEnabled = defaults.object(forKey: "enabled") as? Bool ?? true
         scope = DisplayScope(rawValue: defaults.string(forKey: "scope") ?? "") ?? .allDisplays
         roundCorners = defaults.object(forKey: "roundCorners") as? Bool ?? true
         showMenuBarIcon = defaults.object(forKey: "showMenuBarIcon") as? Bool ?? true
-        hideNotchOnLockScreen = defaults.object(forKey: "hideNotchOnLockScreen") as? Bool ?? true
+        // Version 1.1's toggle: someone who turned it off keeps the lock screen as is.
+        let legacyOff = defaults.object(forKey: "hideNotchOnLockScreen") as? Bool == false
+        lockScreenStyle = LockScreenStyle(rawValue: defaults.string(forKey: "lockScreenStyle") ?? "")
+            ?? (legacyOff ? .off : .blackBehindIcons)
     }
 }

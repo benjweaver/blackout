@@ -26,10 +26,12 @@ struct SettingsView: View {
                 .disabled(!settings.isEnabled)
 
             Section {
-                Toggle("Hide the notch on the lock screen", isOn: $settings.hideNotchOnLockScreen)
-                    .disabled(!settings.isEnabled)
+                Picker("Lock screen", selection: $settings.lockScreenStyle) {
+                    ForEach(LockScreenStyle.allCases) { Text($0.title).tag($0) }
+                }
+                .disabled(!settings.isEnabled)
             } footer: {
-                Text("While the screen is locked, the display briefly switches to the size that ends below the camera.")
+                Text(lockScreenFooter)
                     .foregroundStyle(.secondary)
             }
 
@@ -63,6 +65,17 @@ struct SettingsView: View {
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(
             for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)) { _ in
             reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        }
+    }
+
+    private var lockScreenFooter: String {
+        switch settings.lockScreenStyle {
+        case .blackBehindIcons:
+            "Covers the strip beside the notch with black while the screen is locked. Apple's Wi-Fi, battery, and input source icons still show."
+        case .shrinkBelowCamera:
+            "While the screen is locked, the display switches to the size that ends below the camera. The icons move below the notch."
+        case .off:
+            "The lock screen looks the way macOS draws it."
         }
     }
 

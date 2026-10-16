@@ -9,12 +9,21 @@ from its section below.
 
 ### Added
 
-- The notch is hidden on the lock screen. While the screen is locked, Blackout
-  switches each display with a notch to its mode that ends below the camera, so
-  the strip beside the notch is unlit, then restores the original mode on unlock.
-  The mode is set for Blackout only, so macOS restores it if Blackout quits. It
-  doesn't apply to the login window at boot or the FileVault unlock screen, since
-  Blackout isn't running then. A new setting, on by default, turns it off.
+- The notch is hidden on the lock screen, in one of two ways, chosen in a new
+  "Lock screen" setting:
+  - **Black behind the icons** (the default): while the screen is locked, the
+    strip beside the notch turns black, and Apple's Wi-Fi, battery, and input
+    source icons still show in it, as they do in the menu bar. Blackout draws
+    only black, keyed around the icons, from a private window layer that sits
+    above the lock screen. It uses private macOS interfaces and turns itself off
+    if they're missing.
+  - **Shrink below the camera**: Blackout switches each display with a notch to
+    its mode that ends below the camera, so the strip is unlit, then restores the
+    original mode on unlock. The mode is set for Blackout only, so macOS restores
+    it if Blackout quits.
+
+  Neither applies to the login window at boot or the FileVault unlock screen,
+  since Blackout isn't running then. "Leave as is" turns both off.
 
 ## [1.1.1] - 2026-10-02
 
