@@ -121,8 +121,10 @@ private final class BarView: NSView {
 /// and blacks out everything else, so the + floats on black with no ring around it. The
 /// rest of the time the bar sits over the desktop-level bar and stays black.
 private final class MissionControlBarView: NSView {
-    // Glyphs are white; the strip's blurred background stays below half brightness.
-    private static let key = BackdropKey(gain: 30, threshold: 0.5, anyChannel: true)
+    // Glyphs are white. The strip's blur takes the wallpaper's color, which can pass half
+    // brightness in one channel (0.86 red on a red wallpaper), so every channel has to be
+    // bright, as with the menu bar's key.
+    private static let key = BackdropKey(gain: 30, threshold: 0.7, anyChannel: false)
     private var keyLayer: CALayer?
 
     override init(frame: NSRect) {

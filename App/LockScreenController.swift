@@ -21,38 +21,21 @@ final class LockScreenController: NSObject {
     private var isWanted = false
     private var savedModes: [CGDirectDisplayID: CGDisplayMode] = [:]
 
-    // Testing aid for displays without a notch (a VM, say): `defaults write
-    // dev.benjweaver.Blackout LockScreenTestInset -float 32` treats every screen as having that inset.
-    private static let testInsetKey = "LockScreenTestInset"
-
     override init() {
         super.init()
-        let center = DistributedNotificationCenter.default()
-        center.addObserver(self, selector: #selector(screenLocked),
-                           name: NSNotification.Name("com.apple.screenIsLocked"), object: nil)
-        center.addObserver(self, selector: #selector(screenUnlocked),
-                           name: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil)
-        let session = CGSessionCopyCurrentDictionary() as? [String: Any]
-        isLocked = session?["CGSSessionScreenIsLocked"] as? Bool ?? false
+        isLocked = ScreenLock.shared.isLocked
         if isLocked { log.info("Already locked at launch") }
+        ScreenLock.shared.observe { [weak self] locked in
+            self?.log.info("\(locked ? "Lock" : "Unlock") notification received")
+            self?.isLocked = locked
+            self?.reconcile()
+        }
     }
 
     /// Whether the feature is on: Blackout enabled and the setting set. Turning it off
     /// while locked puts the modes back.
     func update(wanted: Bool) {
         isWanted = wanted
-        reconcile()
-    }
-
-    @objc private func screenLocked() {
-        log.info("Lock notification received")
-        isLocked = true
-        reconcile()
-    }
-
-    @objc private func screenUnlocked() {
-        log.info("Unlock notification received")
-        isLocked = false
         reconcile()
     }
 
@@ -69,7 +52,7 @@ final class LockScreenController: NSObject {
 
     private func applyNoNotchModes() {
         let start = ContinuousClock.now
-        let override = UserDefaults.standard.double(forKey: Self.testInsetKey)
+        let override = UserDefaults.standard.double(forKey: ScreenLock.testInsetKey)
         var saved: [CGDirectDisplayID: CGDisplayMode] = [:]
         var targets: [(CGDirectDisplayID, CGDisplayMode)] = []
         for screen in NSScreen.screens {

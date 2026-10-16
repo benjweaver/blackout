@@ -72,6 +72,23 @@ final class BackdropStripController: NSObject {
     private var mode = Mode.hidden
     /// Keeps the lock-screen strip up briefly after unlock, then fades it out.
     private var unlockFade: Task<Void, Never>?
+    private var revealObserver: NSObjectProtocol?
+    /// What the strips were last built for, so screen changes that leave it alone (the
+    /// Dock showing or hiding, say) don't rebuild every window.
+    private var builtFor: [ScreenLayout] = []
+    /// Each display's menu bar height from its visible frame, by display UUID, for when a
+    /// full-screen app has hidden the menu bar and the visible frame reaches the top.
+    private var menuBarHeights: [String: CGFloat] = [:]
+
+    /// What one screen's strips depend on.
+    private struct ScreenLayout: Equatable {
+        let display: String
+        let frame: CGRect
+        let inset: CGFloat
+        let menuBarHeight: CGFloat
+        let leftEnd: CGFloat
+        let rightStart: CGFloat
+    }
 
     // Lock-screen tuning, measured on a 16-inch MacBook Pro. loginwindow right-aligns its
     // icons 20 pt from the screen edge and centers their glyphs about 12.5–24 pt from the top.
@@ -94,16 +111,13 @@ final class BackdropStripController: NSObject {
     // leaves the menu bar as macOS draws it.
     private var menuBarKey: BackdropKey { BackdropKey(gain: Self.setting("MenuBarKeyGain", 40),
                                       threshold: Self.setting("MenuBarKeyThreshold", 0.7), anyChannel: false) }
-    // Testing aid for displays without a notch, shared with LockScreenController.
-    private static let testInsetKey = "LockScreenTestInset"
-
     override init() {
         super.init()
-        let center = DistributedNotificationCenter.default()
-        center.addObserver(self, selector: #selector(screenLocked),
-                           name: NSNotification.Name("com.apple.screenIsLocked"), object: nil)
-        center.addObserver(self, selector: #selector(screenUnlocked),
-                           name: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil)
+        isLocked = ScreenLock.shared.isLocked
+        ScreenLock.shared.observe { [weak self] locked in
+            self?.isLocked = locked
+            self?.reconcile()
+        }
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
         let workspace = NSWorkspace.shared.notificationCenter
@@ -117,11 +131,15 @@ final class BackdropStripController: NSObject {
         workspace.addObserver(self, selector: #selector(spaceChanged),
             name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
         // Posted every frame while a menu bar slides in or out, with its space and reveal.
+        // Delivered on the main queue, whichever thread SkyLight posts it from.
         if let center = skyLight.coordinatedNotificationCenter, let name = skyLight.menuBarRevealNotification {
-            center.addObserver(self, selector: #selector(menuBarRevealChanged(_:)), name: name, object: nil)
+            revealObserver = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
+                guard let info = notification.userInfo,
+                      let menuSpace = (info["space"] as? NSNumber)?.uint64Value,
+                      let reveal = (info["reveal"] as? NSNumber)?.doubleValue else { return }
+                MainActor.assumeIsolated { self?.menuBarRevealChanged(menuSpace: menuSpace, reveal: reveal) }
+            }
         }
-        let session = CGSessionCopyCurrentDictionary() as? [String: Any]
-        isLocked = session?["CGSSessionScreenIsLocked"] as? Bool ?? false
     }
 
     /// `lockScreen`: black behind the icons while locked. `menuBar`: cover the menu bar's
@@ -181,16 +199,6 @@ final class BackdropStripController: NSObject {
         log.info("Backdrop strip off")
     }
 
-    @objc private func screenLocked() {
-        isLocked = true
-        reconcile()
-    }
-
-    @objc private func screenUnlocked() {
-        isLocked = false
-        reconcile()
-    }
-
     @objc private func accessibilityChanged() {
         reconcile()
     }
@@ -202,17 +210,16 @@ final class BackdropStripController: NSObject {
     }
 
     /// The notification names the Space macOS keeps the menu bar in, whose parent is the
-    /// desktop or full-screen Space it belongs to.
-    @objc private func menuBarRevealChanged(_ notification: Notification) {
-        guard let info = notification.userInfo,
-              let menuSpace = (info["space"] as? NSNumber)?.uint64Value,
-              let reveal = (info["reveal"] as? NSNumber)?.doubleValue else { return }
+    /// desktop or full-screen Space it belongs to. Spaces on displays without a strip
+    /// (another display, with the bar on the built-in one only) are skipped.
+    private func menuBarRevealChanged(menuSpace: UInt64, reveal: Double) {
         let space = skyLight.parentSpace(of: menuSpace) ?? menuSpace
-        menuBarReveal[space] = reveal
-        if menuBarStrips[space] == nil {
-            syncMenuBarStrips()
-        } else {
+        if menuBarStrips[space] != nil {
+            menuBarReveal[space] = reveal
             applyMenuBarReveal()
+        } else if let display = skyLight.display(of: space), menuBarGeometry[display] != nil {
+            menuBarReveal[space] = reveal
+            syncMenuBarStrips()
         }
     }
 
@@ -233,7 +240,7 @@ final class BackdropStripController: NSObject {
     /// display mode, say) may have removed the notch row, so the strips hide until it's back.
     @objc private func screensChanged() {
         guard space != 0 else { return }
-        if !isLocked {
+        if !isLocked && screenLayouts() != builtFor {
             mode = .hidden
             buildStrips()
         }
@@ -243,7 +250,7 @@ final class BackdropStripController: NSObject {
     private var notchRowPresent: Bool {
         !strips.isEmpty
             && (NSScreen.screens.contains { $0.safeAreaInsets.top > 0 }
-                || UserDefaults.standard.double(forKey: Self.testInsetKey) > 0)
+                || UserDefaults.standard.double(forKey: ScreenLock.testInsetKey) > 0)
     }
 
     private var wantedMode: Mode {
@@ -336,23 +343,37 @@ final class BackdropStripController: NSObject {
 
     /// Builds the lock-screen strips and records where each screen's menu bar strips go,
     /// then rebuilds the menu bar strips for every Space.
-    private func buildStrips() {
-        strips.forEach { $0.window.close() }
-        strips = []
-        menuBarGeometry = [:]
-        let testInset = UserDefaults.standard.double(forKey: Self.testInsetKey)
-        for (index, screen) in NSScreen.screens.enumerated() {
-            guard let id = screen.displayID, let display = SkyLight.uuid(of: id) else { continue }
-            if !allDisplays && CGDisplayIsBuiltin(id) == 0 { continue }
+    /// Each covered screen's geometry. The menu bar can be a point taller than the notch
+    /// row. While a full-screen app has hidden it, the visible frame reaches the top, so
+    /// the height last seen on that display stands in, or failing that the app's own.
+    private func screenLayouts() -> [ScreenLayout] {
+        let testInset = UserDefaults.standard.double(forKey: ScreenLock.testInsetKey)
+        return NSScreen.screens.compactMap { screen in
+            guard let id = screen.displayID, let display = SkyLight.uuid(of: id) else { return nil }
+            if !allDisplays && CGDisplayIsBuiltin(id) == 0 { return nil }
             let frame = screen.frame
             let inset = testInset > 0 ? testInset : screen.safeAreaInsets.top
             let hasNotch = inset > 0
+            let visibleHeight = frame.maxY - screen.visibleFrame.maxY
+            if visibleHeight > 0 { menuBarHeights[display] = visibleHeight }
+            let menuBarHeight = max(inset, menuBarHeights[display] ?? NSApp.mainMenu?.menuBarHeight ?? 0)
             // The strips beside the notch; on a test display, either side of a 200 pt
             // fake notch in the middle; without a notch, the whole width.
             let leftEnd = hasNotch ? (screen.auxiliaryTopLeftArea?.maxX ?? frame.midX - 100) - frame.minX : frame.width / 2
             let rightStart = hasNotch ? (screen.auxiliaryTopRightArea?.minX ?? frame.midX + 100) - frame.minX : frame.width / 2
+            return ScreenLayout(display: display, frame: frame, inset: inset, menuBarHeight: menuBarHeight,
+                                leftEnd: leftEnd, rightStart: rightStart)
+        }
+    }
 
-            if hasNotch {
+    private func buildStrips() {
+        strips.forEach { $0.window.close() }
+        strips = []
+        menuBarGeometry = [:]
+        builtFor = screenLayouts()
+        for (index, screen) in builtFor.enumerated() {
+            let frame = screen.frame, inset = screen.inset, rightStart = screen.rightStart
+            if inset > 0 {
                 let rect = CGRect(x: frame.minX, y: frame.maxY - inset, width: frame.width, height: inset)
                 var keys: [CALayer] = []
                 CATransaction.begin()
@@ -369,16 +390,13 @@ final class BackdropStripController: NSObject {
                 strips.append(Strip(window: window, lockScreen: layout, keyLayers: keys))
             }
 
-            // The menu bar can be a point taller than the notch row. While a full-screen app
-            // has hidden it, the visible frame reaches the top, so fall back to the app's own.
-            let visibleHeight = frame.maxY - screen.visibleFrame.maxY
-            let menuBarHeight = max(inset, visibleHeight > 0 ? visibleHeight : NSApp.mainMenu?.menuBarHeight ?? 0)
+            let menuBarHeight = screen.menuBarHeight
             if menuBarWanted && menuBarHeight > 0 {
-                menuBarGeometry[display] = MenuBarGeometry(
+                menuBarGeometry[screen.display] = MenuBarGeometry(
                     frame: CGRect(x: frame.minX, y: frame.maxY - menuBarHeight, width: frame.width, height: menuBarHeight),
-                    leftEnd: leftEnd, rightStart: rightStart, index: index)
+                    leftEnd: screen.leftEnd, rightStart: rightStart, index: index)
             }
-            log.info("Screen \(index): lock strip \(hasNotch), menu bar height \(menuBarHeight)")
+            log.info("Screen \(index): lock strip \(inset > 0), menu bar height \(menuBarHeight)")
         }
         menuBarStrips.values.flatMap(\.windows).forEach { $0.close() }
         menuBarStrips = [:]
@@ -596,6 +614,7 @@ private struct SkyLight {
     private typealias SpacesForWindows = @convention(c) (Int32, Int32, CFArray) -> Unmanaged<CFArray>?
     private typealias SpaceCopyValues = @convention(c) (Int32, UInt64) -> Unmanaged<CFDictionary>?
     private typealias ManagedDisplaySpaces = @convention(c) (Int32) -> Unmanaged<CFArray>?
+    private typealias DisplayForSpace = @convention(c) (Int32, UInt64) -> Unmanaged<CFString>?
 
     private let connection: Int32
     private let spaceCreate: SpaceCreate?
@@ -608,6 +627,7 @@ private struct SkyLight {
     private let spacesForWindows: SpacesForWindows?
     private let spaceCopyValues: SpaceCopyValues?
     private let managedDisplaySpaces: ManagedDisplaySpaces?
+    private let displayForSpace: DisplayForSpace?
     /// A process-local center on which SkyLight posts menu bar reveal changes.
     let coordinatedNotificationCenter: NotificationCenter?
     let menuBarRevealNotification: Notification.Name?
@@ -633,6 +653,7 @@ private struct SkyLight {
         spacesForWindows = load("SLSCopySpacesForWindows", as: SpacesForWindows.self)
         spaceCopyValues = load("SLSSpaceCopyValues", as: SpaceCopyValues.self)
         managedDisplaySpaces = load("SLSCopyManagedDisplaySpaces", as: ManagedDisplaySpaces.self)
+        displayForSpace = load("SLSCopyManagedDisplayForSpace", as: DisplayForSpace.self)
         coordinatedNotificationCenter = load("SLSCoordinatedLocalNotificationCenter", as: CoordinatedCenter.self)?()?
             .takeUnretainedValue() as? NotificationCenter
         menuBarRevealNotification = dlsym(handle, "kSLSCoordinatedSpaceMenuBarRevealChangedNotificationName")
@@ -643,6 +664,13 @@ private struct SkyLight {
     static func uuid(of display: CGDirectDisplayID) -> String? {
         guard let uuid = CGDisplayCreateUUIDFromDisplayID(display)?.takeRetainedValue() else { return nil }
         return CFUUIDCreateString(nil, uuid) as String
+    }
+
+    /// The UUID of the display a Space is on. With "Displays have separate Spaces" off,
+    /// SkyLight names the one display "Main".
+    func display(of space: UInt64) -> String? {
+        guard let display = displayForSpace?(connection, space)?.takeRetainedValue() as String? else { return nil }
+        return display == "Main" ? Self.uuid(of: CGMainDisplayID()) : display
     }
 
     /// The desktop or full-screen Space a menu bar's own Space belongs to.

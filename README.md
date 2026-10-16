@@ -34,6 +34,10 @@ open build/Build/Products/Release/Blackout.app
 
 Requires macOS 14+. Licensed GPL-3.0-or-later.
 
+## Test menu bar transitions
+
+`Scripts/vm-transitions/run.sh` runs Blackout in a macOS VM with "Show menu bar background" on and records the top of the screen through every transition that moves the menu bar: Mission Control, App Exposé, Show Desktop, full screen in and out, Space switches, and Notification Center. It does this on a range of wallpapers and prints wherever anything but black shows. The script's header says what the VM needs. The VM's display has no notch, so check the notch row on a notched Mac too.
+
 ## Support
 
 Blackout is free. If it's useful, you can [support its development](https://benjweaver.dev/support/blackout).
