@@ -3,6 +3,13 @@
 A free, open-source, telemetry-free menu bar app that hides the MacBook notch by
 drawing a black bar behind the menu bar. Native AppKit, no network code, no analytics.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/blackout-settings-light.png">
+    <img src="docs/screenshots/blackout-settings.png" width="380" alt="Blackout's settings: Hide the notch on, black bar on all displays, rounded desktop corners on, and the lock screen set to black behind the icons.">
+  </picture>
+</p>
+
 - **Show black bar on:** MacBook display only, or all displays (so every menu bar looks the same).
 - Works with dynamic wallpapers, multiple displays, and Spaces: it draws behind the menu bar rather than editing your wallpaper, so nothing needs regenerating.
 - Keeps the notch hidden in Mission Control and App Exposé, which draw a strip of their own over the menu bar.
@@ -57,7 +64,9 @@ Bump the version in `project.yml`, add its section to `CHANGELOG.md`, then commi
 push. `Scripts/release.sh` does the rest: it builds a universal app, signs it with the
 Developer ID, has Apple notarize it, publishes the zip as a GitHub release with that
 changelog section as the notes, and points the
-[Homebrew tap](https://github.com/benjweaver/homebrew-blackout) at it.
+[Homebrew tap](https://github.com/benjweaver/homebrew-blackout) at it. Then it runs
+`Scripts/screenshots.sh`, which retakes the README screenshots from that release in the
+macOS 27 UTM VM and commits them; `SKIP_SCREENSHOTS=1` skips that step.
 
 Notarizing needs an App Store Connect API key, saved once in the keychain as the
 notarytool profile `notary`:
