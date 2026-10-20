@@ -64,7 +64,9 @@ Bump the version in `project.yml`, add its section to `CHANGELOG.md`, then commi
 push. `Scripts/release.sh` does the rest: it builds a universal app, signs it with the
 Developer ID, has Apple notarize it, publishes the zip as a GitHub release with that
 changelog section as the notes, and points the
-[Homebrew tap](https://github.com/benjweaver/homebrew-blackout) at it.
+[Homebrew tap](https://github.com/benjweaver/homebrew-blackout) at it. Then it runs
+`Scripts/screenshots.sh`, which retakes the README screenshots from that release in the
+macOS 27 UTM VM and commits them; `SKIP_SCREENSHOTS=1` skips that step.
 
 Notarizing needs an App Store Connect API key, saved once in the keychain as the
 notarytool profile `notary`:

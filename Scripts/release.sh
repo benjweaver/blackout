@@ -105,3 +105,22 @@ else
   git -C "$tapdir" push -q
   echo "Pointed $tap at $tag; its install test is running."
 fi
+
+# Retake the README screenshots from the release just published, in the macOS 27 VM, and
+# commit them if they changed. SKIP_SCREENSHOTS=1 skips this.
+if [ "${SKIP_SCREENSHOTS:-0}" = 1 ]; then
+  echo "Skipped the screenshots (SKIP_SCREENSHOTS=1); Scripts/screenshots.sh retakes them."
+else
+  if ! Scripts/screenshots.sh; then
+    echo "error: $tag is released, but the screenshots failed; fix the VM and run Scripts/screenshots.sh" >&2
+    exit 1
+  fi
+  if [ -n "$(git status --porcelain -- docs/screenshots)" ]; then
+    git add docs/screenshots
+    git commit -qm "Update the screenshots for $version" -m "The README shows the settings window, so retake it from the release that just shipped."
+    git push -q
+    echo "Committed and pushed the updated screenshots."
+  else
+    echo "The screenshots didn't change."
+  fi
+fi
