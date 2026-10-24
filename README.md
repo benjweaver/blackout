@@ -4,6 +4,12 @@ A free, open-source, telemetry-free menu bar app that hides the MacBook notch by
 drawing a black bar behind the menu bar. Native AppKit, no network code, no analytics.
 
 <p align="center">
+  <img src="docs/screenshots/blackout-menubar.png" width="538" alt="The right half of a MacBook's menu bar with Blackout on: the bar is solid black, with white status icons and the clock, over a bright green and black wallpaper.">
+  <br>
+  <sub>Taken on a MacBook, to the right of the notch.</sub>
+</p>
+
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/blackout-settings-light.png">
     <img src="docs/screenshots/blackout-settings.png" width="380" alt="Blackout's settings: Hide the notch on, black bar on all displays, rounded desktop corners on, and the lock screen set to black behind the icons.">
