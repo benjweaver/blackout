@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Retakes the README screenshots from the latest Blackout release, in the "macOS 27" UTM VM:
 # the settings window in dark (docs/screenshots/blackout-settings.png) and light
-# (docs/screenshots/blackout-settings-light.png).
+# (docs/screenshots/blackout-settings-light.png), and the black menu bar
+# (docs/screenshots/blackout-menubar.png).
 #   Scripts/screenshots.sh
 # It installs the cask from benjweaver/homebrew-blackout, as Homebrew would, so the shots
 # match what people get. Set APP=/path/to/Blackout.app to shoot a local build instead, such
@@ -70,12 +71,16 @@ id=$("$MAC_SH" windows "$app" | awk -F'\t' '$3 == "Blackout" && $4 == 0 { if (!i
 "$MAC_SH" appearance dark
 "$MAC_SH" shot "$tmp/blackout-settings.png" "$id"
 
-# Close the window, then quit Blackout.
+# Close the window, then shoot the menu bar it blacks out, over the default wallpaper. The
+# VM has no notch, so this relies on "Show black bar on" being All displays.
 "$MAC_SH" run "osascript -e 'tell application \"System Events\" to tell process \"Blackout\" to click button 1 of window \"Blackout\"'" || true
+"$MAC_SH" front Finder
+sleep 1
+"$MAC_SH" shot "$tmp/blackout-menubar.png" 0,0,800,110
 "$MAC_SH" quit "$app" || true
 
 mkdir -p "$out"
-for f in blackout-settings.png blackout-settings-light.png; do
+for f in blackout-settings.png blackout-settings-light.png blackout-menubar.png; do
   cp "$tmp/$f" "$out/$f"
   echo "Wrote $out/$f"
 done
